@@ -24,46 +24,49 @@
 #define MIN_ORDER 12
 #define MAX_ORDER 20
 
-#define PAGE_SIZE (1<<MIN_ORDER)
+#define PAGE_SIZE (1 << MIN_ORDER)
 /* page index to address */
-#define PAGE_TO_ADDR(page_idx) (void *)((page_idx*PAGE_SIZE) + g_memory)
+#define PAGE_TO_ADDR(page_idx) (void *)((page_idx * PAGE_SIZE) + g_memory)
 
 /* address to page index */
 #define ADDR_TO_PAGE(addr) ((unsigned long)((void *)addr - (void *)g_memory) / PAGE_SIZE)
 
 /* find buddy address */
-#define BUDDY_ADDR(addr, o) (void *)((((unsigned long)addr - (unsigned long)g_memory) ^ (1<<o)) \
-									 + (unsigned long)g_memory)
+#define BUDDY_ADDR(addr, o) (void *)((((unsigned long)addr - (unsigned long)g_memory) ^ (1 << o)) + (unsigned long)g_memory)
 
 #if USE_DEBUG == 1
-#  define PDEBUG(fmt, ...) \
-	fprintf(stderr, "%s(), %s:%d: " fmt,			\
-		__func__, __FILE__, __LINE__, ##__VA_ARGS__)
-#  define IFDEBUG(x) x
+#define PDEBUG(fmt, ...)                 \
+	fprintf(stderr, "%s(), %s:%d: " fmt, \
+			__func__, __FILE__, __LINE__, ##__VA_ARGS__)
+#define IFDEBUG(x) x
 #else
-#  define PDEBUG(fmt, ...)
-#  define IFDEBUG(x)
+#define PDEBUG(fmt, ...)
+#define IFDEBUG(x)
 #endif
 
 /**************************************************************************
  * Public Types
  **************************************************************************/
-typedef struct {
+typedef struct
+{
 	struct list_head list;
 	/* TODO: DECLARE NECESSARY MEMBER VARIABLES */
+	int order;
+	int index;
+	void *mem;
 } page_t;
 
 /**************************************************************************
  * Global Variables
  **************************************************************************/
 /* free lists*/
-struct list_head free_area[MAX_ORDER+1];
+struct list_head free_area[MAX_ORDER + 1];
 
 /* memory area */
-char g_memory[1<<MAX_ORDER];
+char g_memory[1 << MAX_ORDER];
 
 /* page structures */
-page_t g_pages[(1<<MAX_ORDER)/PAGE_SIZE];
+page_t g_pages[(1 << MAX_ORDER) / PAGE_SIZE];
 
 /**************************************************************************
  * Public Function Prototypes
@@ -79,13 +82,18 @@ page_t g_pages[(1<<MAX_ORDER)/PAGE_SIZE];
 void buddy_init()
 {
 	int i;
-	int n_pages = (1<<MAX_ORDER) / PAGE_SIZE;
-	for (i = 0; i < n_pages; i++) {
+	int n_pages = (1 << MAX_ORDER) / PAGE_SIZE;
+	for (i = 0; i < n_pages; i++)
+	{
 		/* TODO: INITIALIZE PAGE STRUCTURES */
+		g_pages[i].order = -1;
+		g_pages[i].index = i;
+		g_pages[i].mem = PAGE_TO_ADDR(i);
 	}
 
 	/* initialize freelist */
-	for (i = MIN_ORDER; i <= MAX_ORDER; i++) {
+	for (i = MIN_ORDER; i <= MAX_ORDER; i++)
+	{
 		INIT_LIST_HEAD(&free_area[i]);
 	}
 
@@ -110,6 +118,30 @@ void buddy_init()
 void *buddy_alloc(int size)
 {
 	/* TODO: IMPLEMENT THIS FUNCTION */
+	int order = orderFor(size);
+	if (order == -1)
+	{
+		for (int i = order; i <= MAX_ORDER; i++)
+		{
+			if (!list_empty(&free_area[i]))
+			{
+				page_t *page = list_entry(free_area[i].next, page_t, list);
+				if (i == order)
+				{
+					list_del_init(&(page->list));
+					page->order = order;
+					return (page->mem);
+				}
+				else
+				{
+					list_del_init(&(page->list));
+					split(page, i, order);
+					page->order = order;
+					return (page->mem);
+				}
+			}
+		}
+	}
 	return NULL;
 }
 
@@ -135,13 +167,15 @@ void buddy_free(void *addr)
 void buddy_dump()
 {
 	int o;
-	for (o = MIN_ORDER; o <= MAX_ORDER; o++) {
+	for (o = MIN_ORDER; o <= MAX_ORDER; o++)
+	{
 		struct list_head *pos;
 		int cnt = 0;
-		list_for_each(pos, &free_area[o]) {
+		list_for_each(pos, &free_area[o])
+		{
 			cnt++;
 		}
-		printf("%d:%dK ", cnt, (1<<o)/1024);
+		printf("%d:%dK ", cnt, (1 << o) / 1024);
 	}
 	printf("\n");
 }
