@@ -256,6 +256,7 @@ static status_t parse_file()
 		status = parse_command(line, len);
 	}
 
+	free(line); // FIX DEFINETLY LOST from @codyduong
 	return status;
 }
 

@@ -22,7 +22,7 @@ ZIPNAME = project3-buddy
 
 DOXYGENCONF = $(PROGNAME).doxygen
 
-OBJFILES = $(patsubst %.c,%.o,$(CFILES))
+OBJFILES = $(patsubst %.c,%.o,$(CFILES)) -lm
 EXECNAME = $(patsubst %,./%,$(PROGNAME))
 
 RAWC = $(patsubst %.c,%,$(CFILES))
